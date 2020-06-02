@@ -1,4 +1,5 @@
 import React, { Component } from "react";
+import PlacesAutocomplete from "react-places-autocomplete";
 import "./App.css";
 
 const DayCard = ({ reading }) => {
@@ -8,7 +9,7 @@ const DayCard = ({ reading }) => {
   newDate.setTime(weekday);
 
   return (
-    <div className="col-sm-2">
+    <div className="col">
       <div className="card">
         <h3>{moment(newDate).format("dddd")}</h3>
         <p>{moment(newDate).format("MMMM Do, h:mm a")}</p>
@@ -22,11 +23,7 @@ const DayCard = ({ reading }) => {
 };
 
 function Loading() {
-  return (
-    <div className="loader-center">
-      <i className="fa fa-cog fa-spin" />
-    </div>
-  );
+  return <div className="spinner-border"></div>;
 }
 
 class WeekContainer extends Component {
@@ -36,14 +33,14 @@ class WeekContainer extends Component {
       fullData: [],
       dailyData: [],
       query: "",
-      loading: false
+      loading: false,
     };
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
   }
 
-  handleChange(e) {
-    this.setState({ query: e.target.value }, console.log(this.state.query));
+  handleChange(address) {
+    this.setState({ query: address });
   }
   handleSubmit(e) {
     this.setState({ loading: true });
@@ -52,17 +49,21 @@ class WeekContainer extends Component {
     `;
 
     fetch(weatherURL)
-      .then(res => res.json())
-      .then(data => {
-        const dailyData = data.list.filter(reading =>
+      .then((res) => res.json())
+      .then((data) => {
+        const dailyData = data.list.filter((reading) =>
           reading.dt_txt.includes("18:00:00")
         );
 
         this.setState({
           fullData: data.list,
           dailyData: dailyData,
-          loading: false
+          loading: false,
         });
+      })
+      .catch((err) => {
+        this.setState({ loading: false });
+        alert("Cannot find, Please try different keyword");
       });
   }
 
@@ -76,15 +77,47 @@ class WeekContainer extends Component {
       <div>
         <h1 className="head"> 5- Days Weather Forecast</h1>
         <form onSubmit={this.handleSubmit}>
-          <input
-            className="input-box"
-            placeholder="Enter City Name..."
+          <PlacesAutocomplete
+            value={this.state.query}
             onChange={this.handleChange}
-          />
-          <button type="submit" className="submit-btn">
-            Search
-          </button>
-          {this.state.loading ? <Loading /> : console.log("Loaded!!")}
+          >
+            {({
+              getInputProps,
+              suggestions,
+              getSuggestionItemProps,
+              loading,
+            }) => (
+              <div>
+                <input
+                  {...getInputProps({
+                    placeholder: "Search Places ...",
+                    className: "input-box",
+                  })}
+                />
+                <span>
+                  <button className="btn btn-primary " type="submit">
+                    Search
+                    {this.state.loading ? <Loading /> : console.log("Loaded!!")}
+                  </button>
+                </span>
+                <div className="autocomplete-dropdown-container">
+                  {loading && <div className="spinner-border"></div>}
+                  {suggestions.map((suggestion) => {
+                    const className = suggestion.active
+                      ? "text-primary"
+                      : "text";
+                    return (
+                      <div
+                        {...getSuggestionItemProps(suggestion, { className })}
+                      >
+                        <span>{suggestion.description}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </PlacesAutocomplete>
         </form>
         {this.formatDayCards()}
       </div>
